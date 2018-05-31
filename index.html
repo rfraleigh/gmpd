@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Primate Parasite Database</title>
+
+    <script type="text/javascript" src="static/dc.js_2.1.10/web/js/d3.js"></script>
+    <script type="text/javascript" src="static/dc.js_2.1.10/web/js/crossfilter.js"></script>
+    <script type="text/javascript" src="static/dc.js_2.1.10/web/js/dc.js"></script>
+    <script type="text/javascript" src="static/dc.js_2.1.10/src/data-grid.js"></script>
+    <script type="text/javascript" src="static/dc.js_2.1.10/web/js/underscore-min.js"></script>
+
+    <script type="text/javascript" src="static/dc_leaflet/web/js/leaflet.js"></script>
+    <script src="static/dc_leaflet/web/js/colorbrewer.js"></script>
+    <script type="text/javascript" src="static/dc_leaflet/web/js/leaflet.markercluster.js"></script>
+    <script type="text/javascript" src="static/dc_leaflet/web/js/dc.leaflet.js"></script>
+
+    <!--<script src="https://d3js.org/d3-request.v1.min.js"></script>-->
+    <!--<script src="https://d3js.org/d3-queue.v3.min.js"></script>-->
+
+    <script src="static/dcjs_example/jquery.min.js"></script>
+	<link type="text/css" href="static/dc.js_2.1.10/web/css/dc.css" rel="stylesheet"/>
+    <link type="text/css" href="static/bootstrap_4.0/css/bootstrap_4.0.0-alpha.3.css" rel="stylesheet">
+    <link type="text/css" href="static/dc_leaflet/web/css/leaflet.css" rel="stylesheet"/>
+	<link type="text/css" href="static/dc_leaflet/web/css/MarkerCluster.Default.css" rel="stylesheet"/>
+	<link type="text/css" href="static/dc_leaflet/web/css/MarkerCluster.css" rel="stylesheet"/>
+	<link type="text/css" href="static/dc_leaflet/web/css/leaflet-legend.css" rel="stylesheet"/>
+<style>
+    .hostCorrected_wr05 g.row text,
+    .parasiteCorrected g.row text,
+    .parasiteType g.row text,
+    .sampleBasis g.row text,
+    .hostAge g.row text{
+    fill: black;
+    font-size:10pt;
+
+    }
+</style>
+</head>
+<body>
+ <script>
+
+        function grid (selector,data) {
+            console.log(data)
+            var gmpd = crossfilter(data),
+            all = gmpd.groupAll();
+
+            //------ FUNCTIONS -------
+            function toTitleCase(str) {
+                        return str.replace(/\w\S*/g, function (txt) {
+                            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+                        });
+                    }
+            function remove_negative_bins_all(source_group) {
+                        return {
+                            all: function () {
+                                return source_group.all().filter(function (d) {
+                                    return ( d.key != "-1");
+                                });
+                            }
+                        };
+                    }
+            function remove_empty_text_bins(source_group) {
+                        return {
+                            all: function () {
+                                return source_group.all().filter(function (d) {
+                                    return d.key != "";
+                                });
+                            }
+                        };
+                    }
+            function order_by_name(chart){
+                chart.ordering(function (d) {
+                            return d.key
+                        });
+                chart.redraw();
+            }
+            function order_by_value(chart){
+                chart.ordering(function (d) {
+                            return -d.value
+                        });
+                chart.redraw();
+            }
+            function rotateBarChartLabels(classvar) {
+                        d3.selectAll(selector + ' .' + classvar + '  g .axis.x text')
+                            .style("text-anchor", "end")
+                            .attr("transform", function (d) {
+                                return "rotate(-55, -4, 9) ";
+                            });
+                    }
+
+
+
+
+
+
+
+            dc.dataCount(".dc-data-count")
+                        .dimension(gmpd)
+                        .group(all);
+            //--------- STYLES -----------------
+                    var pixels_per_row = 35;
+                    var label_offset = -10;
+                    var region_set = [];
+                    var region_dict = [];
+
+            //--------- CHART DEFINITIONS -----------------
+            //Host Section
+            var row_hostCorrected = dc.rowChart(selector + " .hostCorrected_wr05");
+
+            //Parasite Section
+            var row_parasiteCorrected = dc.rowChart(selector + " .parasiteCorrected");
+            var row_parasiteType = dc.rowChart(selector + " .parasiteType");
+
+            //Prevalence Section
+            var bar_sampleSize = dc.barChart(selector + " .sampleSize");
+            var bar_prevalence = dc.barChart(selector + " .prevalence")
+            //Publication Section
+            //var bar_pubDate = dc.barChart(selector + " .pubDate");
+            var row_sampleBasis = dc.rowChart(selector + " .sampleBasis");
+            var row_hostAge = dc.rowChart(selector +" .hostAge");
+            var pie_hostSex = dc.pieChart(selector + " .hostSex");
+
+            //Map Section
+
+            //Data Table Section
+
+
+
+
+
+
+            //---------- Dimension Definitions --------------------
+            var hostCorrected = gmpd.dimension(function (d) {
+                        if (typeof d.host_corrected_name_wr05 == "undefined") return "";
+                        return d.host_corrected_name_wr05;
+            }, false);
+            var hostCorrectedGroup = remove_empty_text_bins(hostCorrected.group().reduceSum(function (d) {
+                return 1;
+            }));
+
+            //--------------------------
+            var parasiteCorrected = gmpd.dimension(function (d) {
+                        if (typeof d.parasite_corrected_name == "undefined") return "";
+                        return d.parasite_corrected_name;
+            }, false);
+            var parasiteCorrectedGroup = remove_empty_text_bins(parasiteCorrected.group().reduceSum(function (d) {
+                return 1;
+            }));
+
+            //--------------------------
+            var parasiteType = gmpd.dimension(function (d) {
+                        if (typeof d.parasite_type == "undefined") return "";
+                        return d.parasite_type;
+            }, false);
+            var parasiteTypeGroup = remove_empty_text_bins(parasiteType.group().reduceSum(function (d) {
+                return 1;
+            }));
+
+            //--------------------------
+            var sampleSize = gmpd.dimension(function (d) {
+                        if (typeof d.sample_size == "undefined") return "";
+                        return d.sample_size;
+            }, false);
+            var sampleSizeGroup = remove_negative_bins_all(sampleSize.group().reduceSum(function (d) {
+                return 1;
+            }));
+
+            //----------------------------------
+            var sampleBasis = gmpd.dimension(function (d) {
+                        if (typeof d.sample_basis == "undefined") return "";
+                        return d.sample_basis;
+            }, false);
+            var sampleBasisGroup = remove_empty_text_bins(sampleBasis.group().reduceSum(function (d) {
+                return 1;
+            }));
+
+            //--------------------------
+            var hostAge = gmpd.dimension(function (d) {
+                        if (typeof d.host_age == "undefined") return "";
+                        return d.host_age;
+            }, false);
+            var hostAgeGroup = remove_empty_text_bins(hostAge.group().reduceSum(function (d) {
+                return 1;
+            }));
+            //--------------------------
+
+            var hostSex = gmpd.dimension(function (d) {
+                        if (typeof d.host_sex == "undefined") return "";
+                        return d.host_sex;
+            }, false);
+            var hostSexGroup = remove_empty_text_bins(hostSex.group().reduceSum(function (d) {
+                return 1;
+            }));
+            //------------------------------
+            var location = gmpd.dimension(function (d) {
+                        if (typeof d.location == "undefined") return "";
+                        return [toTitleCase(d.location.toLowerCase()),"" +d.latitude+","+d.longitude+""];
+                    }, false);
+            var locationGroup = remove_empty_text_bins(location.group().reduceSum(function (d) {
+                return 1;
+            }));
+            locationGroup.all().forEach(function (d, i) {
+                if (d.key[0]=="" | d.key[1]==",") {
+
+                    d.loc = "0.0,0.0";
+                    d.inst = "Missing Data";
+                    d.key = d.loc
+
+                }
+                else{
+                     d.loc = d.key[1];
+                    d.inst = d.key[0];
+                    d.key = d.loc
+                }
+                return d;
+                    });
+            console.log(locationGroup.all())
+                    //console.log('Facility group',facilityGroup.all())
+            //---------------------------------
+            var prevalence = gmpd.dimension(function (d) {
+                        if (typeof d.prevalence == "undefined" ) return ""
+                        if (d.prevalence =='-99.0') return ""
+
+                        return d.prevalence;
+            }, false);
+            var prevalenceGroup = remove_empty_text_bins(prevalence.group().reduceSum(function (d) {
+                return 1;
+            }));
+
+            //-------------------------------
+
+            checkList = [
+                'check_close',
+                'check_nonclose',
+                'check_vector',
+                'check_sexual',
+                'check_intermediate',
+                'check_vertical'
+            ];
+            checkVar = [
+                'close',
+                'nonclose',
+                'vector',
+                'sexual',
+                'intermediate',
+                'vertical'
+            ];
+            checkList_dim = [];
+            checkList_dimGroup=[];
+            checkList.forEach(function(e,i){
+                checkList_dim[checkList[i]]= gmpd.dimension(function(d){
+                    if (typeof d[checkVar[i]] == "undefined") return "";
+                        return d[checkVar[i]];
+                },false)
+            });
+
+            d3.selectAll(".checkbox").on("change",update);
+            function update(){
+              cb = d3.select(this);
+              checkboxes(cb,
+                  {
+                  'close':checkList_dim['check_close'],
+                  'nonclose':checkList_dim['check_nonclose'],
+                  'vector':checkList_dim['check_vector'],
+                  'sexual':checkList_dim['check_sexual'],
+                   'intermediate':checkList_dim['check_intermediate'],
+                  'vertical':checkList_dim['check_vertical']
+                  }
+                  )
+                }
+
+            function checkboxes(selector,checklist) {
+                Object.keys(checklist).forEach(function (val, ind) {
+                    if (selector.property("checked")) {
+                        if (selector.property("value") == val) {
+                            checklist[val].filter(function (d) {
+                                if (d == 1) {
+                                    return d
+                                }
+                            });
+
+                            dc.redrawAll()
+                        }
+                    }
+                    if (selector.property("checked") == false) {
+                        if (selector.property("value") == val) {
+                            //console.log('Uncheck');
+                            checklist[val].filter(null);
+                            dc.redrawAll()
+                        }
+                    }
+                })
+            }
+            //--------- CHART Definitions --------------------------
+            row_hostCorrected
+                        .width($('div.parasiteCorrected').width()*.9)
+                        .height(hostCorrectedGroup.all().length*pixels_per_row)
+                        //.height(150 * pixels_per_row).cap(150)
+                        .gap(1)
+                        .margins({top: 0, right: 0, bottom: 50, left: 0})
+                        .x(d3.scale.ordinal())
+                        .labelOffsetX(-label_offset)
+                        .label(function (d) {
+                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                        })
+                        .elasticX(true)
+                        .dimension(hostCorrected)
+                        .group(hostCorrectedGroup)
+                        .ordering(function (d) {
+                            return -d.value
+                        });
+            d3.select('span.hostCorrected_name').on('click',function(){return order_by_name(row_hostCorrected)});
+            d3.select('span.hostCorrected_value').on('click',function(){return order_by_value(row_hostCorrected)});
+
+            //-----------------------------------------------------
+            row_parasiteCorrected
+                        .width($('div.hostCorrected_wr05').width()*.95)
+                        .height(parasiteCorrectedGroup.all().length*pixels_per_row)
+                        //.height(150 * pixels_per_row).cap(150)
+                        .gap(1)
+                        .margins({top: 0, right: 0, bottom: 50, left: 0})
+                        .x(d3.scale.ordinal())
+                        .labelOffsetX(-label_offset)
+                        .label(function (d) {
+                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                        })
+                        .elasticX(true)
+                        .dimension(parasiteCorrected)
+                        .group(parasiteCorrectedGroup)
+                        .ordering(function (d) {
+                            return -d.value
+                        });
+            d3.select('span.parasiteCorrected_name').on('click',function(){return order_by_name(row_parasiteCorrected)});
+            d3.select('span.parasiteCorrected_value').on('click',function(){return order_by_value(row_parasiteCorrected)});
+
+            //--------------------------------------------------------------
+            row_parasiteType
+                        .width($('div.parasiteType').width()*.95)
+                        .height(parasiteTypeGroup.all().length*pixels_per_row)
+                        //.height(150 * pixels_per_row).cap(150)
+                        .gap(1)
+                        .margins({top: 0, right: 0, bottom: 50, left: 10})
+                        .x(d3.scale.ordinal())
+                        .labelOffsetX(-label_offset)
+                        .label(function (d) {
+                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                        })
+                        .elasticX(true)
+                        .dimension(parasiteType)
+                        .group(parasiteTypeGroup)
+                        .ordering(function (d) {
+                            return -d.value
+                        });
+           //----------------------------
+
+            bar_sampleSize
+                        .width($('div.sampleSize').width())
+                        .height($('div.sampleSize').height())
+                        .margins({top: 10, right: 0, bottom: 50, left: 50})
+                        .x(d3.scale.linear().domain([1,100]).range([1,100]))
+                        .yAxis(d3.svg.axis().ticks(4).orient('left'))
+                        .brushOn(true)
+                        .elasticX(false)
+                        .elasticY(true)
+                        //.xAxisLabel('Publication Date')
+                        .yAxisLabel('# Records')
+                        .dimension(sampleSize)
+                        .barPadding(0.1)
+                        .outerPadding(0.05)
+                        .group(sampleSizeGroup)
+                        .on('pretransition', function () {
+                            rotateBarChartLabels('sampleSize');
+                            //bar_date.select('g text.x-axis-label').attr("y", "10")
+                            //bar_date.select('g text.y-axis-label').attr("y", "10")
+                        });
+
+            //------------------------------------------------
+            bar_prevalence
+                        .width($('div.prevalence').width())
+                        .height($('div.prevalence').height())
+                        .margins({top: 10, right: 10, bottom: 50, left: 50})
+                        .x(d3.scale.linear().domain([0,1]).range([0,1]))
+                        .yAxis(d3.svg.axis().ticks(4).orient('left'))
+                        .brushOn(true)
+                        .elasticX(false)
+                        .elasticY(true)
+                        .xUnits(dc.units.fp.precision(0.1))
+                        //.xAxisLabel('Publication Date')
+                        .yAxisLabel('Count')
+                        .dimension(prevalence)
+                        .barPadding(0.1)
+                        .outerPadding(0.05)
+                        .group(prevalenceGroup)
+                        .on('pretransition', function () {
+                            rotateBarChartLabels('prevalence');
+                            //bar_date.select('g text.x-axis-label').attr("y", "10")
+                            //bar_date.select('g text.y-axis-label').attr("y", "10")
+                        });
+            //--------------------------------------------------
+            row_sampleBasis
+                        .width($('div.sampleBasis').width()*.95)
+                        .height(sampleBasisGroup.all().length*pixels_per_row+50)
+                        //.height(150 * pixels_per_row).cap(150)
+                        .gap(1)
+                        .margins({top: 0, right: 0, bottom: 50, left: 10})
+                        .x(d3.scale.ordinal())
+                        .labelOffsetX(-label_offset)
+                        .label(function (d) {
+                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                        })
+                        .elasticX(true)
+                        .dimension(sampleBasis)
+                        .group(sampleBasisGroup)
+                        .ordering(function (d) {
+                            return -d.value
+                        });
+            //---------------------------------------------
+            row_hostAge
+                        .width($('div.hostAge').width()*.95)
+                        .height(hostAgeGroup.all().length*pixels_per_row)
+                        //.height(150 * pixels_per_row).cap(150)
+                        .gap(1)
+                        .margins({top: 0, right: 0, bottom: 50, left: 10})
+                        .x(d3.scale.ordinal())
+                        .labelOffsetX(-label_offset)
+                        .label(function (d) {
+                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                        })
+                        .elasticX(true)
+                        .dimension(hostAge)
+                        .group(hostAgeGroup)
+                        .ordering(function (d) {
+                            return -d.value
+                        });
+
+            //--------------------------
+          var NameGender= {"Male":"Male","Female":"Female","":"missing data","Unstated":"missing data","Both Sexes":"Both","Null":"missing data"};
+          var SymbolGender= {"Male":"\u2642","Female":"\u2640","":"","Both":"","Null":"","Unstated":""};
+
+          pie_hostSex
+            .width($('div.hostSex').width())
+            .height($('div.hostSex').height())
+              .radius(40)
+               .cx(150)
+              .cy(50)
+            .dimension(hostSex)
+            .label(function (d){
+               return SymbolGender[d.key];
+            })
+            .title(function (d){
+               return NameGender[d.key] +": "+d.value;
+            })
+            .ordering(function(kv) { return -kv.value; })
+            .group(hostSexGroup)
+            .legend(dc.legend().x(0).y(10).itemHeight(12).legendText(function(d){
+                return NameGender[d.name] + " ("+d.data+")";}));
+
+
+          //---------------
+
+          var marker = dc_leaflet.markerChart(" .map")
+                        .dimension(location)
+                        .group(locationGroup)
+                        .width($('div.map').width())
+                        .height($('div.map').height())
+                        .center([42.5, 7.5])
+                        .zoom(2)
+                        .cluster(true)
+                        .title(function (d) {
+                            return toTitleCase(d.inst);
+                        })
+
+
+            //--------------------------
+
+            var pub_table = dc.dataTable('.dc-data-table');
+                    pub_table
+                        .width($('div.dc-data-table').width())
+                        .height($('div.dc-data-table').height())
+                        .dimension(parasiteCorrected)
+                        .group(function (d) {
+                            return d.host_corrected_name_wr05
+                        })
+                        .size(500)
+                        .columns([
+                            function(d){return d.host_corrected_name_wr05 },
+                            //function(d){return d.host_age },
+                            //function(d){return d.host_sex },
+
+                            function(d){return d.parasite_corrected_name },
+                            function(d){return d.parasite_type },
+
+                            function(d){return d.location },
+                            function(d){return parseFloat(d.prevalence).toPrecision(2) },
+                            //function(d){return d.resolution },
+                            function(d){return d.sample_size },
+                            function(d){return d.sample_basis },
+                            function(d){return d.full_reference }
+                        ])
+                        .order(d3.ascending)
+                        .on('renderlet', function (table) {
+                            table.selectAll('.dc-table-group').classed('info', true);
+
+                        })
+function replaceAll(str, find, replace) {
+            return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+        }
+        function escapeRegExp(str) {
+            return str.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1");
+        }
+        function exportToCsv() {
+           var filename = 'gmpd_export.csv';
+           var rows = parasiteCorrected.top(Infinity);
+            var fields = Object.keys(rows[0])
+            var replacer = function(key, value) { return value === 'nan' ? '' : value }
+            var csv ="";
+           csv+=fields.join(',')+'\r\n';
+           rows.forEach(function(d){
+                row = [];
+                fields.forEach(function(e){
+                    var row_data = JSON.stringify(d[e], replacer);
+                    row_data = replaceAll(row_data,'[','')
+                    row_data = replaceAll(row_data,']','')
+                    row_data = replaceAll(row_data,'"','')
+                    row_data = '"'+row_data+'"'
+
+                    row.push(row_data)})
+                csv+=row.join(',')+'\r\n';
+            });
+
+            var hiddenElement = document.createElement('a');
+                hiddenElement.href = 'data:text/csv;charset=utf-8,' + csv;
+                hiddenElement.target = '_blank';
+                hiddenElement.download = filename;
+                hiddenElement.click();
+        }
+
+        d3.select('button.download_table').on('click',exportToCsv)
+
+            dc.renderAll();
+
+        }
+</script>
+<section class="gmpd" id="gmpd" style="padding-left:100px;padding-right:100px; background:#f2f2f2">
+    <div class="row">
+        <div class="col-lg-3"></div>
+        <div class="col-lg-6" style="text-align:center">
+            <h3 style="text-align:center; padding-top:25px;">Global Primate Parasite Database</h3>
+            <p class="lead-5" style="text-align:center">Explore Parasite Taxonomy, Transmission, Prevalence, and Global Location</p>
+
+            <p style="font-size:10px;">The underlying <a href="https://parasites.nunn-lab.org/primates/download/">Data</a> from this visualization belongs to the <a href="https://parasites.nunn-lab.org/">Global Primate Parasite Database</a> coordinated
+                by <a href="https://people.nunn-lab.org/charlie/">Charlie Nunn's</a> lab at Duke University.</p>
+        </div>
+        <div class="col-lg-3">
+
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <h5>Research Locations</h5>
+            <div class="col-lg-12 map center" id="map" style="height:350px;"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="dc-data-count col-md-12">
+        <p><span class="filter-count"></span> of <span class="total-count"></span> Records Selected | <a
+                            href="javascript:dc.filterAll();dc.renderAll();">Reset All</a></p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-4" style="height: 525px;background:white; box-shadow: 1px 1px lightgray; padding-top:15px;padding-bottom:25px;margin-right:5px;">
+            <h4>Host</h4>
+            <div class="col-lg-6">
+                <h5>Host Name (corrected)</h5>
+                <p>Sort by <span class="hostCorrected_value" style="color:blue">Count</span> or by <span class="hostCorrected_name" style="color:blue">Name</span></p>
+                <div class="col-lg-12 hostCorrected_wr05" style="height:350px; overflow: auto;"></div>
+            </div>
+            <div class="col-lg-6">
+                <h5>Host Sex</h5>
+                <div class="col-lg-12 hostSex" style="height:115px;padding-bottom:15px;"></div>
+                <h5>Host Age</h5>
+                <div class="col-lg-12 hostAge" style="height:150px;padding-bottom:15px;"></div>
+                <h5>Sample Basis</h5>
+                <div class="col-lg-12 sampleBasis" style="height:75px;padding-bottom:15px;"></div>
+            </div>
+        </div>
+        <div class="col-lg-4" style="height: 525px; background:white; box-shadow: 1px 1px lightgray; padding-top:15px;padding-bottom:25px; margin-left:5px;">
+            <h4>Parasites</h4>
+            <div class="col-lg-6">
+                <h5>Parasite Name (corrected)</h5>
+                <p>Sort Parasite by <span class="parasiteCorrected_value" style="color:blue">Count</span> or by <span class="parasiteCorrected_name" style="color:blue">Name</span></p>
+                <div class="col-lg-12 parasiteCorrected" style="height:350px; overflow: auto;"></div>
+            </div>
+            <div class="col-lg-6">
+                <h5>Parasite Type</h5>
+                <div class="col-lg-12 parasiteType" style="height:250px; overflow: auto;"></div>
+                <h5>Transmission</h5>
+                <div class="col-lg-12">
+                    <form >
+                    <label class="checkbox-inline">
+                        <input id="close" type="checkbox" value="close" class="checkbox">Close&nbsp;&nbsp;
+                    </label>
+                    <label class="checkbox-inline">
+                        <input id="nonclose" type="checkbox" value="nonclose" class="checkbox">Nonclose&nbsp;&nbsp;
+                    </label>
+                    <label class="checkbox-inline">
+                        <input id="vector" type="checkbox" value="vector" class="checkbox">Vector&nbsp;&nbsp;
+                    </label>
+                    <label class="checkbox-inline">
+                        <input id="sexual" type="checkbox" value="sexual" class="checkbox">Sexual&nbsp;&nbsp;
+                    </label>
+                    <label class="checkbox-inline">
+                        <input id="intermediate" type="checkbox" value="intermediate" class="checkbox">Intermediate&nbsp;&nbsp;
+                    </label>
+                    <label class="checkbox-inline">
+                        <input id="vertical" type="checkbox" value="vertical" class="checkbox">Vertical&nbsp;&nbsp;
+                    </label>
+                </form>
+                </div>
+            </div>
+
+        </div>
+        <div class="col-lg-3" >
+            <div class="col-lg-12" style="height: 250px;background:white; box-shadow: 1px 1px lightgray; padding-top:15px;margin-bottom:25px; margin-left:5px;">
+                <h4>Prevalence</h4>
+                <p>Shown are Records in [0,1] Range</p>
+                <div class="col-lg-12 prevalence" style="height:175px;"></div>
+            </div>
+            <div class="col-lg-12" style="height: 250px; background:white; box-shadow: 1px 1px lightgray; padding-top:15px;padding-bottom:25px; margin-left:5px;">
+                <h4>Sample Size</h4>
+                <p>Size > 0 is Shown</p>
+                <div class="col-lg-12 sampleSize" style="height:150px;"></div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <div class="row" style="padding-top:25px;padding-bottom:50px">
+        <div class="col-lg-12 " style="background:white; box-shadow: 1px 1px lightgray;padding-top:50px;">
+
+            <h3>Publications | <button class="btn-sm btn-primary download_table" type="submit">Download Selection</button></h3>
+            <div class="table-responsive" style="height:700px;overflow: auto;">
+                      <table class="table col-md-12 dc-data-table" id="pubtable">
+                            <thead class="fixed-header" id="fixed-header" >
+                                <tr >
+                                  <th class="dc-table-column _0" style="min-width:150px;">Host Name</th>
+                                  <th class="dc-table-column _1" style="min-width:150px;">Parasite Name</th>
+                                  <th class="dc-table-column _2" style="min-width:150px;">Parasite Type</th>
+                                  <th class="dc-table-column _2" style="min-width:150px;">Location</th>
+
+                                  <th class="dc-table-column _3" style="min-width:150px;">Prevalence</th>
+                                  <th class="dc-table-column _4" style="min-width:150px;">Sample Size</th>
+                                  <th class="dc-table-column _5" style="min-width:150px;">Sample Basis</th>
+                                  <th class="dc-table-column _6" style="width:100px;">Reference</th>
+                                </tr>
+                            </thead>
+                       </table>
+                  </div>        </div>
+    </div>
+</section>
+
+<script>
+ $(function() {
+      d3.csv('static/data/gmpd_cleaned.csv',function (error,rows){
+          grid ("#gmpd",rows)
+      });
+ });
+</script>
+
+</body>
+
+</html>
