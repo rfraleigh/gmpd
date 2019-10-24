@@ -1,0 +1,21 @@
+/*!
+ * GMPD v1.0.0
+ * Author - Robbie Fraleigh, PhD - The Pennsylvania State University
+ * Licensed under Apache v2 (https://www.apache.org/licenses/LICENSE-2.0)
+ */
+@import url("material-design-iconic-font/css/material-design-iconic-font.min.css");
+
+.zmdi {
+    font-size: 18px;
+    padding-left:7px;
+    padding-top:7px;
+
+}
+.zmdi:hover{
+  font-weight:bold;
+}
+body{
+    padding-left:50px;
+    padding-right:50px;
+    background:#f2f2f2
+}

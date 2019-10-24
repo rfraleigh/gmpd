@@ -25,7 +25,26 @@
 	<link type="text/css" href="static/dc_leaflet/web/css/MarkerCluster.Default.css" rel="stylesheet"/>
 	<link type="text/css" href="static/dc_leaflet/web/css/MarkerCluster.css" rel="stylesheet"/>
 	<link type="text/css" href="static/dc_leaflet/web/css/leaflet-legend.css" rel="stylesheet"/>
+
+    <link type="text/css" href="static/site/css/body.css" rel="stylesheet"/>
+
 <style>
+.chart-card-narrow {
+    min-width: 150px
+}
+.chart-card-wide {
+    min-width: 225px
+}
+.card {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+  padding:15px;
+  padding-right:25px;
+}
+
+.card:hover {
+  box-shadow: 0 5px 5px rgba(0,0,0,0.15), 0 5px 5px rgba(0,0,0,0.15);
+}
     .hostCorrected_wr05 g.row text,
     .parasiteCorrected g.row text,
     .parasiteType g.row text,
@@ -35,12 +54,55 @@
     font-size:10pt;
 
     }
+
+    .prevalence g.axis.x g.tick text, .sampleSize g.axis.x g.tick text{
+    fill: black;
+    font-size:12pt;
+
+    }
+    .prevalence g.axis.y g.tick text, .sampleSize g.axis.y g.tick text{
+    fill: black;
+    font-size:12pt;
+
+    }
+
+    .dc-table-column ._7{
+        min-width:250px;
+    }
+
+
 </style>
 </head>
 <body>
  <script>
 
         function grid (selector,data) {
+
+
+        function minimize_card(div){
+                d3.select(div).select('.header-icon').append('i').attr('class','zmdi zmdi-window-minimize')
+                var minimize_height = 100;
+                d3.select(div).select('.header-icon i.zmdi').on('click',function(){
+
+                    if (d3.select(div).select('.header-icon i').classed('zmdi-window-minimize')===true){
+                        d3.select(div).select('.header-icon i').classed('zmdi-window-minimize',false)
+                        d3.select(div).select('.header-icon i').classed('zmdi-window-maximize',true)
+
+                        $(div+' .row').toggle();
+                        d3.select(div).style('height',minimize_height+'px')
+                    }
+                    else{
+                        d3.select(div).select('.header-icon i').classed('zmdi-window-minimize',true)
+                        d3.select(div).select('.header-icon i').classed('zmdi-window-maximize',false)
+                        $(div+' .row').toggle();
+                        d3.select(div).style('height','auto')
+
+                    }
+                })
+            }
+
+
+
             console.log(data)
             var gmpd = crossfilter(data),
             all = gmpd.groupAll();
@@ -302,7 +364,10 @@
                         .x(d3.scale.ordinal())
                         .labelOffsetX(-label_offset)
                         .label(function (d) {
-                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                            return '(' + d.value + ')  ' + d.key
+                        })
+                        .colors(function (d) {
+                            return "#6baed6"
                         })
                         .elasticX(true)
                         .dimension(hostCorrected)
@@ -323,7 +388,10 @@
                         .x(d3.scale.ordinal())
                         .labelOffsetX(-label_offset)
                         .label(function (d) {
-                            return '(' + d.value + ')  ' + toTitleCase(d.key)
+                            return '(' + d.value + ')  ' + d.key
+                        })
+                        .colors(function (d) {
+                            return "#44ca86"
                         })
                         .elasticX(true)
                         .dimension(parasiteCorrected)
@@ -345,6 +413,9 @@
                         .labelOffsetX(-label_offset)
                         .label(function (d) {
                             return '(' + d.value + ')  ' + toTitleCase(d.key)
+                        })
+                        .colors(function (d) {
+                            return "#44ca86"
                         })
                         .elasticX(true)
                         .dimension(parasiteType)
@@ -387,7 +458,7 @@
                         .elasticY(true)
                         .xUnits(dc.units.fp.precision(0.1))
                         //.xAxisLabel('Publication Date')
-                        .yAxisLabel('Count')
+                        .yAxisLabel('# Records')
                         .dimension(prevalence)
                         .barPadding(0.1)
                         .outerPadding(0.05)
@@ -462,11 +533,12 @@
           var marker = dc_leaflet.markerChart(" .map")
                         .dimension(location)
                         .group(locationGroup)
-                        .width($('div.map').width())
+                        .width($('div#map-section').width()*.95)
                         .height($('div.map').height())
-                        .center([42.5, 7.5])
+                        .center([17.5, 10])
                         .zoom(2)
                         .cluster(true)
+                        .clusterOptions({ maxClusterRadius: 40, disableClusteringAtZoom:10,spiderfyOnMaxZoom: false,showCoverageOnHover: false})
                         .title(function (d) {
                             return toTitleCase(d.inst);
                         })
@@ -484,6 +556,23 @@
                         })
                         .size(500)
                         .columns([
+
+                            function(d){
+                                var text =""
+
+                                var year_patt = /\b(19|20)\d{2}\b/;
+                                var res = year_patt.exec(d.full_reference);
+                                if (typeof res!== 'undefined' && res!==null){
+                                    var titlestr = d.full_reference.slice(res.index+5,d.full_reference.length).split('.')[0].split(' ').join('+')
+                                    text = "<a target='_blank' href ='http://google.com/search?q="+titlestr+"+\""+res[0]+"\"'>"+d.full_reference+"</a>"
+                                }
+                                else{
+                                    text = d.full_reference
+                                }
+
+                            return text},
+
+
                             function(d){return d.host_corrected_name_wr05 },
                             //function(d){return d.host_age },
                             //function(d){return d.host_sex },
@@ -495,8 +584,7 @@
                             function(d){return parseFloat(d.prevalence).toPrecision(2) },
                             //function(d){return d.resolution },
                             function(d){return d.sample_size },
-                            function(d){return d.sample_basis },
-                            function(d){return d.full_reference }
+                            function(d){return d.sample_basis }
                         ])
                         .order(d3.ascending)
                         .on('renderlet', function (table) {
@@ -538,30 +626,34 @@ function replaceAll(str, find, replace) {
 
         d3.select('button.download_table').on('click',exportToCsv)
 
-            dc.renderAll();
+        dc.renderAll();
+        row_hostCorrected.width(d3.select('div.hostCorrected_wr05').node().parentNode.clientWidth*.95)
+        pie_hostSex.width(d3.select('div.hostSex').node().parentNode.clientWidth*.95)
+        row_hostAge.width(d3.select('div.hostAge').node().parentNode.clientWidth*.95)
+        row_sampleBasis.width(d3.select('div.sampleBasis ').node().parentNode.clientWidth*.95)
+        row_parasiteCorrected.width(d3.select('div.parasiteCorrected ').node().parentNode.clientWidth*.95)
+        row_parasiteType.width(d3.select('div.parasiteType ').node().parentNode.clientWidth*.95)
+
+
+
+        dc.redrawAll()
+        minimize_card('#host-card')
+        minimize_card('#parasite-card')
+        minimize_card('#stats-card')
+        minimize_card('#map-card')
 
         }
 </script>
-<section class="gmpd" id="gmpd" style="padding-left:100px;padding-right:100px; background:#f2f2f2">
-    <div class="row">
-        <div class="col-lg-3"></div>
-        <div class="col-lg-6" style="text-align:center">
+<section class="gmpd" id="gmpd">
+    <div class="row" style="padding-right:50px;">
+        <div class="m-x-auto" style="text-align:center;width:1000px;">
             <h3 style="text-align:center; padding-top:25px;">Global Primate Parasite Database</h3>
-            <p class="lead-5" style="text-align:center">Explore Parasite Taxonomy, Transmission, Prevalence, and Global Location</p>
-
-            <p style="font-size:10px;">The underlying <a href="https://parasites.nunn-lab.org/primates/download/">Data</a> from this visualization belongs to the <a href="https://parasites.nunn-lab.org/">Global Primate Parasite Database</a> coordinated
-                by <a href="https://people.nunn-lab.org/charlie/">Charlie Nunn's</a> lab at Duke University.</p>
-        </div>
-        <div class="col-lg-3">
-
-        </div>
-
-    </div>
-
-    <div class="row">
-        <div class="col-lg-12">
-            <h5>Research Locations</h5>
-            <div class="col-lg-12 map center" id="map" style="height:350px;"></div>
+            <h5 class="lead-5" style="text-align:center">Explore Parasite Taxonomy, Transmission, Prevalence, and Global Location</h5>
+            <p style="text-align:left;font-size:16px;">This visualization brings clarity around the globally observed mammalian parasites as recorded through academic literature.
+                Use the charts to explore parasites by recorded attributes such as prevalence, transmission vectors, type, hosts, and sample size.
+                The underlying <a href="https://parasites.nunn-lab.org/primates/download/">Data</a> from this visualization belongs to the <a href="https://parasites.nunn-lab.org/">Global Primate Parasite Database</a> coordinated
+                by <a href="https://people.nunn-lab.org/charlie/">Charlie Nunn's</a> lab at Duke University.
+            </p>
         </div>
     </div>
     <div class="row">
@@ -570,71 +662,142 @@ function replaceAll(str, find, replace) {
                             href="javascript:dc.filterAll();dc.renderAll();">Reset All</a></p>
         </div>
     </div>
+
     <div class="row">
-        <div class="col-lg-4" style="height: 525px;background:white; box-shadow: 1px 1px lightgray; padding-top:15px;padding-bottom:25px;margin-right:5px;">
-            <h4>Host</h4>
-            <div class="col-lg-6">
-                <h5>Host Name (corrected)</h5>
-                <p>Sort by <span class="hostCorrected_value" style="color:blue">Count</span> or by <span class="hostCorrected_name" style="color:blue">Name</span></p>
-                <div class="col-lg-12 hostCorrected_wr05" style="height:350px; overflow: auto;"></div>
-            </div>
-            <div class="col-lg-6">
-                <h5>Host Sex</h5>
-                <div class="col-lg-12 hostSex" style="height:115px;padding-bottom:15px;"></div>
-                <h5>Host Age</h5>
-                <div class="col-lg-12 hostAge" style="height:150px;padding-bottom:15px;"></div>
-                <h5>Sample Basis</h5>
-                <div class="col-lg-12 sampleBasis" style="height:75px;padding-bottom:15px;"></div>
+        <div class="col-sm-6">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="card" id="host-card">
+                        <div class="header-icon" style="display:inline-block; float:right"></div>
+                        <div class="card-title" >
+                            <h4>Host</h4>
+                        </div>
+                            <div class="row" style="display:flex;flex-direction:row" >
+                                <div class="col-sm-6" >
+                                    <h5>Host Name (corrected)</h5>
+                                    <p>Sort by <span class="hostCorrected_value" style="color:blue">Count</span> or by <span class="hostCorrected_name" style="color:blue">Name</span></p>
+                                    <div class="col-sm-12">
+                                        <div class="hostCorrected_wr05" style="height:350px; overflow: auto;"></div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 ">
+                                    <div class="row" style="display:flex;flex-flow:column;">
+                                        <div class="col-sm-12" style="flex:1 0" >
+                                            <h5>Host Sex</h5>
+                                            <div class="hostSex" style="height:115px;padding-bottom:15px;"></div>
+                                        </div>
+                                        <div class="col-sm-12" style="flex:1 0">
+                                            <h5>Host Age</h5>
+                                            <div class="hostAge" style="height:150px;padding-bottom:15px;"></div>
+                                        </div>
+                                        <div class="col-sm-12" style="flex:1 0">
+                                            <h5>Sample Basis</h5>
+                                            <div class="sampleBasis" style="height:75px;padding-bottom:15px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="col-lg-12">
+                    <div class="card" id="parasite-card">
+                        <div class="header-icon" style="display:inline-block; float:right"></div>
+
+                        <div class="card-title" >
+                            <h4>Parasites</h4>
+                        </div>
+                            <div class="row" >
+                                <div class="col-sm-6" >
+                                    <h5>Parasite Name (corrected)</h5>
+                                    <p>Sort Parasite by <span class="parasiteCorrected_value" style="color:blue">Count</span> or by <span class="parasiteCorrected_name" style="color:blue">Name</span></p>
+                                    <div class="col-sm-12">
+                                        <div class="parasiteCorrected" style="height:350px; overflow: auto;"></div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 ">
+                                    <div class="row" style="display:flex;flex-flow:column;">
+                                        <div class="col-sm-12" >
+                                            <h5>Parasite Type</h5>
+                                            <div class="parasiteType" style="height:250px;padding-bottom:15px;"></div>
+                                        </div>
+                                        <div class="col-sm-12" >
+                                            <h5>Transmission</h5>
+                                            <div class="col-lg-12">
+                                                <form >
+                                                <label class="checkbox-inline">
+                                                    <input id="close" type="checkbox" value="close" class="checkbox">Close&nbsp;&nbsp;
+                                                </label>
+                                                <label class="checkbox-inline">
+                                                    <input id="nonclose" type="checkbox" value="nonclose" class="checkbox">Nonclose&nbsp;&nbsp;
+                                                </label>
+                                                <label class="checkbox-inline">
+                                                    <input id="vector" type="checkbox" value="vector" class="checkbox">Vector&nbsp;&nbsp;
+                                                </label>
+                                                <label class="checkbox-inline">
+                                                    <input id="sexual" type="checkbox" value="sexual" class="checkbox">Sexual&nbsp;&nbsp;
+                                                </label>
+                                                <label class="checkbox-inline">
+                                                    <input id="intermediate" type="checkbox" value="intermediate" class="checkbox">Intermediate&nbsp;&nbsp;
+                                                </label>
+                                                <label class="checkbox-inline">
+                                                    <input id="vertical" type="checkbox" value="vertical" class="checkbox">Vertical&nbsp;&nbsp;
+                                                </label>
+                                            </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-lg-4" style="height: 525px; background:white; box-shadow: 1px 1px lightgray; padding-top:15px;padding-bottom:25px; margin-left:5px;">
-            <h4>Parasites</h4>
-            <div class="col-lg-6">
-                <h5>Parasite Name (corrected)</h5>
-                <p>Sort Parasite by <span class="parasiteCorrected_value" style="color:blue">Count</span> or by <span class="parasiteCorrected_name" style="color:blue">Name</span></p>
-                <div class="col-lg-12 parasiteCorrected" style="height:350px; overflow: auto;"></div>
-            </div>
-            <div class="col-lg-6">
-                <h5>Parasite Type</h5>
-                <div class="col-lg-12 parasiteType" style="height:250px; overflow: auto;"></div>
-                <h5>Transmission</h5>
+        <div class="col-sm-6">
+            <div class="row">
                 <div class="col-lg-12">
-                    <form >
-                    <label class="checkbox-inline">
-                        <input id="close" type="checkbox" value="close" class="checkbox">Close&nbsp;&nbsp;
-                    </label>
-                    <label class="checkbox-inline">
-                        <input id="nonclose" type="checkbox" value="nonclose" class="checkbox">Nonclose&nbsp;&nbsp;
-                    </label>
-                    <label class="checkbox-inline">
-                        <input id="vector" type="checkbox" value="vector" class="checkbox">Vector&nbsp;&nbsp;
-                    </label>
-                    <label class="checkbox-inline">
-                        <input id="sexual" type="checkbox" value="sexual" class="checkbox">Sexual&nbsp;&nbsp;
-                    </label>
-                    <label class="checkbox-inline">
-                        <input id="intermediate" type="checkbox" value="intermediate" class="checkbox">Intermediate&nbsp;&nbsp;
-                    </label>
-                    <label class="checkbox-inline">
-                        <input id="vertical" type="checkbox" value="vertical" class="checkbox">Vertical&nbsp;&nbsp;
-                    </label>
-                </form>
+                    <div class="card" id="map-card" >
+                        <div class="header-icon" style="display:inline-block; float:right"></div>
+                        <div class="row" id="map-section">
+                            <h4 style="padding-left:25px;">Observed Locations</h4>
+                            <div class="col-lg-12 map center" id="map" style="height:500px;"></div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <div class="card" id="stats-card" >
+                        <div class="header-icon" style="display:inline-block; float:right"></div>
+                        <div class="row">
+                            <div class="col-lg-12" >
+                                <h4>Prevalence</h4>
+                                <p>Shown are Records in [0,1] Range</p>
+                                <div class="col-lg-12 prevalence" style="height:125px;"></div>
+                            </div>
+                            <div class="col-lg-12" >
+                                <h4>Sample Size</h4>
+                                <p>Size > 0 is Shown</p>
+                                <div class="col-lg-12 sampleSize" style="height:125px;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
         </div>
-        <div class="col-lg-3" >
-            <div class="col-lg-12" style="height: 250px;background:white; box-shadow: 1px 1px lightgray; padding-top:15px;margin-bottom:25px; margin-left:5px;">
-                <h4>Prevalence</h4>
-                <p>Shown are Records in [0,1] Range</p>
-                <div class="col-lg-12 prevalence" style="height:175px;"></div>
-            </div>
-            <div class="col-lg-12" style="height: 250px; background:white; box-shadow: 1px 1px lightgray; padding-top:15px;padding-bottom:25px; margin-left:5px;">
-                <h4>Sample Size</h4>
-                <p>Size > 0 is Shown</p>
-                <div class="col-lg-12 sampleSize" style="height:150px;"></div>
-            </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+
         </div>
+    </div>
+
+    <div class="row">
+
+
+
 
 
 
@@ -648,15 +811,15 @@ function replaceAll(str, find, replace) {
                       <table class="table col-md-12 dc-data-table" id="pubtable">
                             <thead class="fixed-header" id="fixed-header" >
                                 <tr >
-                                  <th class="dc-table-column _0" style="min-width:150px;">Host Name</th>
-                                  <th class="dc-table-column _1" style="min-width:150px;">Parasite Name</th>
-                                  <th class="dc-table-column _2" style="min-width:150px;">Parasite Type</th>
-                                  <th class="dc-table-column _2" style="min-width:150px;">Location</th>
+                                  <th class="dc-table-column _0" style="min-width:250px;">Reference</th>
+                                  <th class="dc-table-column _1" style="min-width:150px;">Host Name</th>
+                                  <th class="dc-table-column _2" style="min-width:150px;">Parasite Name</th>
+                                  <th class="dc-table-column _3" style="min-width:150px;">Parasite Type</th>
+                                  <th class="dc-table-column _4" style="min-width:150px;">Location</th>
 
-                                  <th class="dc-table-column _3" style="min-width:150px;">Prevalence</th>
-                                  <th class="dc-table-column _4" style="min-width:150px;">Sample Size</th>
-                                  <th class="dc-table-column _5" style="min-width:150px;">Sample Basis</th>
-                                  <th class="dc-table-column _6" style="width:100px;">Reference</th>
+                                  <th class="dc-table-column _5" style="min-width:150px;">Prevalence</th>
+                                  <th class="dc-table-column _6" style="min-width:150px;">Sample Size</th>
+                                  <th class="dc-table-column _7" style="min-width:150px;">Sample Basis</th>
                                 </tr>
                             </thead>
                        </table>
